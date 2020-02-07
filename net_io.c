@@ -1509,8 +1509,8 @@ static int handleHTTPRequest(struct client *c, char *p) {
         "Content-Type: %s\r\n"
         "Connection: %s\r\n"
         "Content-Length: %d\r\n"
-        "Cache-Control: no-cache, must-revalidate\r\n"
-        "Expires: Sat, 26 Jul 1997 05:00:00 GMT\r\n"
+        "Cache-Control: max-age=3600\r\n"   // cache busting is used for aircraft.json, but others can be cached
+        "Expires: 2050-01-01 00:00:00 GMT\r\n"
         "\r\n",
         statuscode, statusmsg,
         content_type,
@@ -1522,17 +1522,19 @@ static int handleHTTPRequest(struct client *c, char *p) {
     }
 
     /* hack hack hack. try to deal with large content */
-    anetSetSendBuffer(Modes.aneterr, c->fd, clen + hdrlen);
+    anetSetSendBuffer(Modes.aneterr, c->fd, clen + hdrlen + 32);
 
     // Send header and content.
+    int hdrsent = 0, csent = 0;
 #ifndef _WIN32
-    if ( (write(c->fd, hdr, hdrlen) != hdrlen) 
-      || (write(c->fd, content, clen) != clen) )
+    if ( (hdrsent = (write(c->fd, hdr, hdrlen)) != hdrlen) 
+      || (csent = (write(c->fd, content, clen)) != clen) )
 #else
-    if ( (send(c->fd, hdr, hdrlen, 0) != hdrlen) 
-      || (send(c->fd, content, clen, 0) != clen) )
+    if ( (hdrsent = (send(c->fd, hdr, hdrlen, 0)) != hdrlen) 
+      || (csent = (send(c->fd, content, clen, 0)) != clen) )
 #endif
     {
+        //printf("send() failed %d %d %d %d\r\n", hdrlen, hdrsent, clen, csent);
         free(content);
         return 1;
     }

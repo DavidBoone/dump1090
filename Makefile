@@ -43,6 +43,8 @@ CFLAGS+= -DMISSING_NANOSLEEP
 COMPAT+= compat/clock_nanosleep/clock_nanosleep.o
 endif
 
+CFLAGS+= -DENABLE_WEBSERVER=1
+
 all: dump1090 view1090
 
 %.o: %.c *.h
